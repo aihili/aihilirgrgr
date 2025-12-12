@@ -159,15 +159,15 @@ export const MachinesManagement: React.FC = () => {
     <button
       type="button"
       onClick={onClick}
-      className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all h-24 w-full ${
+      className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all h-20 w-full ${
         active 
           ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' 
           : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'
       }`}
     >
-      <Icon size={20} className={active ? 'animate-pulse' : ''} />
+      <Icon size={18} className={active ? 'animate-pulse' : ''} />
       <span className="text-[10px] font-bold uppercase text-center leading-tight">{label}</span>
-      <div className={`w-2 h-2 rounded-full ${active ? 'bg-white' : 'bg-slate-200'}`}></div>
+      <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-white' : 'bg-slate-200'}`}></div>
     </button>
   );
 
@@ -339,8 +339,8 @@ export const MachinesManagement: React.FC = () => {
 
       {/* HISTORY & STATUS MODAL */}
       {isHistoryOpen && selectedMachine && (
-        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center z-50 animate-fade-in px-4 py-6">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-full flex flex-col animate-slide-up ring-1 ring-black/5 overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-50 animate-fade-in p-4 md:p-6">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col animate-slide-up ring-1 ring-black/5 overflow-hidden">
                 
                 {/* Header */}
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
@@ -422,7 +422,7 @@ export const MachinesManagement: React.FC = () => {
                     </div>
 
                     {/* RIGHT: Add Status Form (Fixed width, Scrollable content) */}
-                    <div className="w-full md:w-[450px] bg-slate-50 flex flex-col border-t md:border-t-0 shrink-0">
+                    <div className="w-full md:w-[500px] bg-slate-50 flex flex-col border-t md:border-t-0 shrink-0 border-l border-slate-100">
                          <div className="p-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
                             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <Activity size={16} className="text-indigo-600" />
