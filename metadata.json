@@ -1,0 +1,5 @@
+{
+  "name": "Machine Control Admin",
+  "description": "Admin dashboard for managing users, machines, devices, and permissions.",
+  "requestFramePermissions": []
+}
