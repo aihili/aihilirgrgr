@@ -52,6 +52,13 @@ export interface PermissionRequest {
   machine_id: number;
 }
 
+export interface PermissionDetail {
+  user_id: number;
+  username: string;
+  machine_id: number;
+  machine_name: string;
+}
+
 export interface LoginResponse {
   token: string;
 }

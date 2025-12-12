@@ -1,4 +1,4 @@
-import { Machine, User, Device, PermissionRequest, MachineStatus } from '../types';
+import { Machine, User, Device, PermissionRequest, MachineStatus, PermissionDetail } from '../types';
 
 const API_BASE_URL = 'https://virescent-clelia-heartaching.ngrok-free.dev';
 
@@ -143,6 +143,12 @@ export const api = {
   },
 
   // Permissions
+  getAllPermissions: async (): Promise<PermissionDetail[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/permissions`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
   grantPermission: async (req: PermissionRequest) => {
     const response = await fetch(`${API_BASE_URL}/api/admin/permissions`, {
       method: 'POST',
