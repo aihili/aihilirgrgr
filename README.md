@@ -1,20 +1,48 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# NexusControl Admin
 
-# Run and deploy your AI Studio app
+A modern, tech-themed admin dashboard for managing IoT devices, users, and machine permissions.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/drive/1ibIJyfQwZAr-_5j2xDZlF1M17cSEPnH-
+- **Dashboard**: Real-time system statistics.
+- **Machines**: Monitor production unit status (RPM, Cycles, Temperature).
+- **Users**: Manage team access and roles.
+- **IoT Devices**: Registry for connected sensors and edge devices.
+- **Permissions**: Granular access control linking users to machines.
 
-## Run Locally
+## Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend**: React, TypeScript, Vite
+- **Styling**: Tailwind CSS (CDN), Custom Animations
+- **Icons**: Lucide React
 
+## Getting Started
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+
+### Installation
+
+1. Install the dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+3. Open your browser and navigate to `http://localhost:5173`.
+
+### Building for Production
+
+To create a production build:
+
+```bash
+npm run build
+```
