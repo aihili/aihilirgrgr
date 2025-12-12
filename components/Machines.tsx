@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Machine } from '../types';
-import { Plus, Trash2, Edit2, Activity, Zap, Wind, Settings, Info, X } from 'lucide-react';
+import { Machine, MachineStatus } from '../types';
+import { Plus, Trash2, Edit2, Activity, Zap, Wind, Settings, Info, X, Clock, Save, RotateCw } from 'lucide-react';
 
 export const MachinesManagement: React.FC = () => {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false); // For Create/Edit Machine
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // For Viewing History
+  
+  // Data States
   const [machineName, setMachineName] = useState('');
   const [editId, setEditId] = useState<number | null>(null);
+  
+  // History & Status States
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
+  const [history, setHistory] = useState<MachineStatus[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [newStatus, setNewStatus] = useState({
+    main_speed_rpm: 0,
+    machine_cycles: 0,
+    fan_on: false,
+    powder_on: false
+  });
 
   const fetchMachines = async () => {
     setLoading(true);
@@ -25,6 +41,8 @@ export const MachinesManagement: React.FC = () => {
   useEffect(() => {
     fetchMachines();
   }, []);
+
+  // --- CRUD Machine ---
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +82,50 @@ export const MachinesManagement: React.FC = () => {
     setMachineName('');
     setEditId(null);
     setIsModalOpen(true);
+  };
+
+  // --- History & Status Logic ---
+
+  const openHistory = async (m: Machine) => {
+    setSelectedMachine(m);
+    setIsHistoryOpen(true);
+    setLoadingHistory(true);
+    
+    // Reset new status form
+    setNewStatus({
+        main_speed_rpm: m.status?.main_speed_rpm || 0,
+        machine_cycles: m.status?.machine_cycles || 0,
+        fan_on: m.status?.fan_on || false,
+        powder_on: m.status?.powder_on || false
+    });
+
+    try {
+      const historyData = await api.getMachineHistory(m.id);
+      // Sort desc by date if not already
+      const sorted = historyData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setHistory(sorted);
+    } catch (err) {
+      console.error("Failed to load history", err);
+      setHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleAddStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMachine) return;
+    
+    try {
+        await api.createMachineStatus(selectedMachine.id, newStatus);
+        // Refresh history
+        const historyData = await api.getMachineHistory(selectedMachine.id);
+        const sorted = historyData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setHistory(sorted);
+        fetchMachines(); // Refresh main list to show latest status
+    } catch (err) {
+        alert("Failed to add status");
+    }
   };
 
   return (
@@ -106,10 +168,13 @@ export const MachinesManagement: React.FC = () => {
                    </div>
                 </div>
                 <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(machine)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                   <button onClick={() => openHistory(machine)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="View History">
+                    <Clock size={16} />
+                  </button>
+                  <button onClick={() => openEdit(machine)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Edit">
                     <Edit2 size={16} />
                   </button>
-                  <button onClick={() => handleDelete(machine.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button onClick={() => handleDelete(machine.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -183,6 +248,7 @@ export const MachinesManagement: React.FC = () => {
         )}
       </div>
 
+      {/* CREATE / EDIT MACHINE MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in px-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-slide-up ring-1 ring-black/5">
@@ -225,6 +291,145 @@ export const MachinesManagement: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* HISTORY & STATUS MODAL */}
+      {isHistoryOpen && selectedMachine && (
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-md flex items-center justify-center z-50 animate-fade-in px-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col animate-slide-up ring-1 ring-black/5 overflow-hidden">
+                
+                {/* Header */}
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                            <Clock size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800">{selectedMachine.name} - Status History</h3>
+                            <p className="text-slate-500 text-xs mt-0.5 font-mono">ID: {selectedMachine.id}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsHistoryOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-lg">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                    
+                    {/* LEFT: History List */}
+                    <div className="flex-1 border-r border-slate-100 flex flex-col bg-white overflow-hidden">
+                        <div className="p-4 bg-slate-50/30 border-b border-slate-100 flex justify-between items-center">
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Log</h4>
+                            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{history.length} records</span>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-0">
+                            {loadingHistory ? (
+                                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                    <RotateCw className="animate-spin mr-2" size={16} /> Loading history...
+                                </div>
+                            ) : history.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm">
+                                    <Clock size={32} className="mb-2 opacity-20" />
+                                    No history records found
+                                </div>
+                            ) : (
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                                        <tr>
+                                            <th className="px-4 py-3 border-b border-slate-100">Time</th>
+                                            <th className="px-4 py-3 border-b border-slate-100">RPM</th>
+                                            <th className="px-4 py-3 border-b border-slate-100">Cycles</th>
+                                            <th className="px-4 py-3 border-b border-slate-100 text-right">State</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {history.map((status) => (
+                                            <tr key={status.id} className="hover:bg-slate-50/50 transition-colors text-sm">
+                                                <td className="px-4 py-3 text-slate-600 font-mono text-xs">
+                                                    {new Date(status.created_at).toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 font-semibold text-slate-700">
+                                                    {status.main_speed_rpm}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">
+                                                    {status.machine_cycles.toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <span title="Fan" className={`w-2 h-2 rounded-full ${status.fan_on ? 'bg-emerald-500' : 'bg-slate-200'}`}></span>
+                                                        <span title="Powder" className={`w-2 h-2 rounded-full ${status.powder_on ? 'bg-indigo-500' : 'bg-slate-200'}`}></span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* RIGHT: Add Status Form */}
+                    <div className="w-full md:w-80 bg-slate-50/50 p-6 flex flex-col border-t md:border-t-0">
+                         <div className="mb-6">
+                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <Activity size={16} className="text-indigo-600" />
+                                Update Status
+                            </h4>
+                            <p className="text-xs text-slate-500 mt-1">Manually push a status update.</p>
+                         </div>
+
+                         <form onSubmit={handleAddStatus} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 mb-1.5">RPM (Speed)</label>
+                                <input 
+                                    type="number" 
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                    value={newStatus.main_speed_rpm}
+                                    onChange={e => setNewStatus({...newStatus, main_speed_rpm: Number(e.target.value)})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 mb-1.5">Cycles</label>
+                                <input 
+                                    type="number" 
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                    value={newStatus.machine_cycles}
+                                    onChange={e => setNewStatus({...newStatus, machine_cycles: Number(e.target.value)})}
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setNewStatus(p => ({...p, fan_on: !p.fan_on}))}
+                                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${newStatus.fan_on ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+                                >
+                                    <Wind size={20} />
+                                    <span className="text-xs font-bold">FAN {newStatus.fan_on ? 'ON' : 'OFF'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewStatus(p => ({...p, powder_on: !p.powder_on}))}
+                                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${newStatus.powder_on ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+                                >
+                                    <Zap size={20} />
+                                    <span className="text-xs font-bold">POWDER</span>
+                                </button>
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 active:translate-y-0.5"
+                            >
+                                <Save size={16} />
+                                Push Status Update
+                            </button>
+                         </form>
+                    </div>
+                </div>
+            </div>
         </div>
       )}
     </div>

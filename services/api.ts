@@ -1,4 +1,4 @@
-import { Machine, User, Device, PermissionRequest } from '../types';
+import { Machine, User, Device, PermissionRequest, MachineStatus } from '../types';
 
 const API_BASE_URL = 'https://virescent-clelia-heartaching.ngrok-free.dev';
 
@@ -96,6 +96,22 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/api/admin/machines/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+  // Machine History & Status
+  getMachineHistory: async (id: number): Promise<MachineStatus[]> => {
+    // Assuming endpoint structure. Adjust if backend differs.
+    const response = await fetch(`${API_BASE_URL}/api/admin/machines/${id}/history`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+  createMachineStatus: async (id: number, status: Partial<MachineStatus>) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/machines/${id}/status`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(status),
     });
     return handleResponse(response);
   },
