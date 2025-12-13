@@ -117,49 +117,49 @@ export const PermissionsManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col">
-        <h3 className="text-xl font-bold text-slate-800">Access Control</h3>
-        <p className="text-slate-500 text-sm mt-1">Bind users to specific machinery. Changes apply immediately.</p>
+        <h3 className="text-xl font-bold text-slate-800 dark:text-white">Access Control</h3>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Bind users to specific machinery. Changes apply immediately.</p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         
         {/* LEFT PANEL: Grant Interface */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h4 className="font-bold text-slate-700 flex items-center gap-2">
-              <ShieldCheck size={18} className="text-indigo-600" />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden h-[600px] xl:h-[calc(100vh-200px)] min-h-[500px]">
+          <div className="p-4 md:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex justify-between items-center shrink-0">
+            <h4 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400" />
               New Assignment
             </h4>
             {feedback && (
-              <span className={`text-xs font-bold px-3 py-1 rounded-full animate-fade-in ${feedback.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+              <span className={`text-xs font-bold px-3 py-1 rounded-full animate-fade-in ${feedback.type === 'success' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                 {feedback.msg}
               </span>
             )}
           </div>
 
-          <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-100 overflow-hidden">
+          <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-slate-800 overflow-hidden">
             
             {/* User List Column */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-3 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider text-center border-b border-slate-100">
+              <div className="p-2 md:p-3 bg-slate-50 dark:bg-slate-800/50 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center border-b border-slate-100 dark:border-slate-800">
                 Step 1: Select User
               </div>
               
               {/* User Search */}
-              <div className="p-2 border-b border-slate-100 bg-white">
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                   <input 
                     type="text" 
                     placeholder="Find user..." 
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 custom-scrollbar">
                 {filteredUsers.length === 0 ? (
                   <div className="text-center py-4 text-xs text-slate-400">No users found</div>
                 ) : (
@@ -167,18 +167,18 @@ export const PermissionsManagement: React.FC = () => {
                     <button
                       key={u.id}
                       onClick={() => setSelectedUser(u.id)}
-                      className={`w-full flex items-center p-3 rounded-xl transition-all text-left group ${
+                      className={`w-full flex items-center p-2 md:p-3 rounded-xl transition-all text-left group ${
                         selectedUser === u.id 
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                          : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 text-slate-600'
+                          : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 font-bold text-xs ${selectedUser === u.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 font-bold text-xs shrink-0 ${selectedUser === u.id ? 'bg-white/20 text-white' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'}`}>
                         {u.username.charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{u.username}</div>
-                        <div className={`text-[10px] ${selectedUser === u.id ? 'text-indigo-200' : 'text-slate-400'}`}>ID: {u.id}</div>
+                        <div className={`text-[10px] ${selectedUser === u.id ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>ID: {u.id}</div>
                       </div>
                       {selectedUser === u.id && <Check size={16} />}
                     </button>
@@ -189,25 +189,25 @@ export const PermissionsManagement: React.FC = () => {
 
             {/* Machine List Column */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-3 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider text-center border-b border-slate-100">
+              <div className="p-2 md:p-3 bg-slate-50 dark:bg-slate-800/50 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center border-b border-slate-100 dark:border-slate-800">
                 Step 2: Select Machine
               </div>
 
               {/* Machine Search */}
-              <div className="p-2 border-b border-slate-100 bg-white">
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <div className="relative">
                   <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                   <input 
                     type="text" 
                     placeholder="Find machine..." 
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
                     value={machineSearch}
                     onChange={(e) => setMachineSearch(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 custom-scrollbar">
                 {filteredMachines.length === 0 ? (
                   <div className="text-center py-4 text-xs text-slate-400">No machines found</div>
                 ) : (
@@ -215,18 +215,18 @@ export const PermissionsManagement: React.FC = () => {
                     <button
                       key={m.id}
                       onClick={() => setSelectedMachine(m.id)}
-                      className={`w-full flex items-center p-3 rounded-xl transition-all text-left group ${
+                      className={`w-full flex items-center p-2 md:p-3 rounded-xl transition-all text-left group ${
                         selectedMachine === m.id 
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                          : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 text-slate-600'
+                          : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${selectedMachine === m.id ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 shrink-0 ${selectedMachine === m.id ? 'bg-white/20 text-white' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'}`}>
                         <HardDrive size={16} />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{m.name}</div>
-                        <div className={`text-[10px] ${selectedMachine === m.id ? 'text-indigo-200' : 'text-slate-400'}`}>ID: {m.id}</div>
+                        <div className={`text-[10px] ${selectedMachine === m.id ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>ID: {m.id}</div>
                       </div>
                       {selectedMachine === m.id && <Check size={16} />}
                     </button>
@@ -238,11 +238,11 @@ export const PermissionsManagement: React.FC = () => {
           </div>
 
           {/* Action Bar */}
-          <div className="p-4 border-t border-slate-100 bg-white z-10">
+          <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 z-10 shrink-0">
             <button
               onClick={handleGrant}
               disabled={!selectedUser || !selectedMachine || isSubmitting}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-600 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                  <ArrowRightLeft className="animate-spin" size={18} />
@@ -255,50 +255,50 @@ export const PermissionsManagement: React.FC = () => {
         </div>
 
         {/* RIGHT PANEL: Active Rules */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-            <h4 className="font-bold text-slate-700 flex items-center gap-2">
-              <Server size={18} className="text-emerald-600" />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden h-[500px] xl:h-[calc(100vh-200px)] min-h-[400px]">
+          <div className="p-4 md:p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex justify-between items-center shrink-0">
+            <h4 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+              <Server size={18} className="text-emerald-600 dark:text-emerald-400" />
               Active Rules
             </h4>
-            <span className="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-md font-mono font-bold">
+            <span className="text-xs bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md font-mono font-bold">
               {permissions.length}
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
+          <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar p-0">
             {permissions.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
                 <Shield size={48} strokeWidth={1} className="mb-2" />
                 <span className="text-sm font-medium">No active permissions found</span>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-bold tracking-wider shadow-sm">
+              <table className="w-full text-left border-collapse min-w-[500px]">
+                <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0 z-10 text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider shadow-sm">
                   <tr>
-                    <th className="px-5 py-3 border-b border-slate-100">User</th>
-                    <th className="px-5 py-3 border-b border-slate-100">Access To Machine</th>
-                    <th className="px-5 py-3 border-b border-slate-100 text-right">Action</th>
+                    <th className="px-5 py-3 border-b border-slate-100 dark:border-slate-800">User</th>
+                    <th className="px-5 py-3 border-b border-slate-100 dark:border-slate-800">Access To Machine</th>
+                    <th className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                   {permissions.map((p, idx) => (
-                    <tr key={`${p.user_id}-${p.machine_id}-${idx}`} className="group hover:bg-slate-50 transition-colors">
+                    <tr key={`${p.user_id}-${p.machine_id}-${idx}`} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center shrink-0">
                             <UserCircle2 size={18} />
                           </div>
                           <div>
-                            <div className="text-sm font-semibold text-slate-700">{p.username}</div>
-                            <div className="text-[10px] text-slate-400">User ID: {p.user_id}</div>
+                            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{p.username}</div>
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500">User ID: {p.user_id}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <ArrowRightLeft size={14} className="text-slate-300" />
-                          <div className="py-1 px-3 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium flex items-center gap-2">
+                          <ArrowRightLeft size={14} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                          <div className="py-1 px-3 rounded-md bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm font-medium flex items-center gap-2 whitespace-nowrap">
                             <HardDrive size={14} />
                             {p.machine_name}
                           </div>
@@ -307,7 +307,7 @@ export const PermissionsManagement: React.FC = () => {
                       <td className="px-5 py-3 text-right">
                         <button 
                           onClick={() => handleRevoke(p.user_id, p.machine_id)}
-                          className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Revoke Permission"
                         >
                           <Trash2 size={16} />
