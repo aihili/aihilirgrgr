@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { User, Machine, PermissionDetail } from '../types';
-import { ShieldCheck, Shield, HardDrive, Lock, Check, X, ArrowRightLeft, UserCircle2, Server, Trash2 } from 'lucide-react';
+import { ShieldCheck, Shield, HardDrive, Lock, Check, X, ArrowRightLeft, UserCircle2, Server, Trash2, Search } from 'lucide-react';
 
 export const PermissionsManagement: React.FC = () => {
   // Data Lists
@@ -12,6 +12,10 @@ export const PermissionsManagement: React.FC = () => {
   // Selection State for Granting
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [selectedMachine, setSelectedMachine] = useState<number | null>(null);
+  
+  // Search State
+  const [userSearch, setUserSearch] = useState('');
+  const [machineSearch, setMachineSearch] = useState('');
   
   // UI State
   const [loading, setLoading] = useState(false);
@@ -40,12 +44,23 @@ export const PermissionsManagement: React.FC = () => {
     loadData();
   }, []);
 
+  // --- Filtering Logic ---
+  const filteredUsers = users.filter(u => 
+    u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
+    u.id.toString().includes(userSearch)
+  );
+
+  const filteredMachines = machines.filter(m => 
+    m.name.toLowerCase().includes(machineSearch.toLowerCase()) || 
+    m.id.toString().includes(machineSearch)
+  );
+
   // --- Actions ---
 
   const handleGrant = async () => {
     if (!selectedUser || !selectedMachine) return;
     
-    // Check if exists locally to prevent useless API call (optional, but good UX)
+    // Check if exists locally to prevent useless API call
     const exists = permissions.some(p => p.user_id === selectedUser && p.machine_id === selectedMachine);
     if (exists) {
       setFeedback({ type: 'error', msg: 'This user already has access to this machine.' });
@@ -55,20 +70,24 @@ export const PermissionsManagement: React.FC = () => {
     setIsSubmitting(true);
     setFeedback(null);
     try {
-      await api.grantPermission({ user_id: selectedUser, machine_id: selectedMachine });
-      setFeedback({ type: 'success', msg: 'Permission granted successfully.' });
+      const res = await api.grantPermission({ user_id: selectedUser, machine_id: selectedMachine });
+      setFeedback({ type: 'success', msg: res.message || 'Permission granted successfully.' });
       
       // Refresh only permissions list to update UI
       const pData = await api.getAllPermissions();
       setPermissions(pData);
       
-      // Optional: Clear selection
-      // setSelectedMachine(null); 
-    } catch (err) {
-      setFeedback({ type: 'error', msg: 'Failed to grant permission.' });
+    } catch (err: any) {
+      let msg = 'Failed to grant permission.';
+      try {
+        const json = JSON.parse(err.message);
+        if (json.error) msg = json.error;
+      } catch (e) {
+        if (err.message && err.message !== 'API Error' && !err.message.startsWith('{')) msg = err.message;
+      }
+      setFeedback({ type: 'error', msg });
     } finally {
       setIsSubmitting(false);
-      // Clear feedback after 3s
       setTimeout(() => setFeedback(null), 3000);
     }
   };
@@ -77,19 +96,23 @@ export const PermissionsManagement: React.FC = () => {
     if (!window.confirm("Are you sure you want to revoke this access?")) return;
     
     try {
-      await api.revokePermission({ user_id: userId, machine_id: machineId });
-      // Update local state immediately for snappy feel, then fetch real data
-      setPermissions(prev => prev.filter(p => !(p.user_id === userId && p.machine_id === machineId)));
+      const res = await api.revokePermission({ user_id: userId, machine_id: machineId });
       
-      // Background sync
+      setPermissions(prev => prev.filter(p => !(p.user_id === userId && p.machine_id === machineId)));
+      setFeedback({ type: 'success', msg: res.message || 'Permission revoked successfully.' });
+      
       const pData = await api.getAllPermissions();
       setPermissions(pData);
-    } catch (err) {
-      alert("Failed to revoke permission.");
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (err: any) {
+      let msg = 'Failed to revoke permission.';
+      try {
+         const json = JSON.parse(err.message);
+         if (json.error) msg = json.error;
+      } catch (e) { /* ignore */ }
+      alert(msg);
     }
   };
-
-  // --- Render Helpers ---
 
   return (
     <div className="space-y-6">
@@ -116,61 +139,99 @@ export const PermissionsManagement: React.FC = () => {
 
           <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-100 overflow-hidden">
             
-            {/* User List */}
+            {/* User List Column */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-3 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">
+              <div className="p-3 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider text-center border-b border-slate-100">
                 Step 1: Select User
               </div>
+              
+              {/* User Search */}
+              <div className="p-2 border-b border-slate-100 bg-white">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Find user..." 
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-                {users.map(u => (
-                  <button
-                    key={u.id}
-                    onClick={() => setSelectedUser(u.id)}
-                    className={`w-full flex items-center p-3 rounded-xl transition-all text-left group ${
-                      selectedUser === u.id 
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                        : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 font-bold text-xs ${selectedUser === u.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
-                      {u.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{u.username}</div>
-                      <div className={`text-[10px] ${selectedUser === u.id ? 'text-indigo-200' : 'text-slate-400'}`}>ID: {u.id} • {u.role}</div>
-                    </div>
-                    {selectedUser === u.id && <Check size={16} />}
-                  </button>
-                ))}
+                {filteredUsers.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-slate-400">No users found</div>
+                ) : (
+                  filteredUsers.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => setSelectedUser(u.id)}
+                      className={`w-full flex items-center p-3 rounded-xl transition-all text-left group ${
+                        selectedUser === u.id 
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                          : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 font-bold text-xs ${selectedUser === u.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
+                        {u.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm truncate">{u.username}</div>
+                        <div className={`text-[10px] ${selectedUser === u.id ? 'text-indigo-200' : 'text-slate-400'}`}>ID: {u.id}</div>
+                      </div>
+                      {selectedUser === u.id && <Check size={16} />}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
-            {/* Machine List */}
+            {/* Machine List Column */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-3 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">
+              <div className="p-3 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider text-center border-b border-slate-100">
                 Step 2: Select Machine
               </div>
+
+              {/* Machine Search */}
+              <div className="p-2 border-b border-slate-100 bg-white">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Find machine..." 
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                    value={machineSearch}
+                    onChange={(e) => setMachineSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-                {machines.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedMachine(m.id)}
-                    className={`w-full flex items-center p-3 rounded-xl transition-all text-left group ${
-                      selectedMachine === m.id 
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                        : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${selectedMachine === m.id ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
-                      <HardDrive size={16} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm truncate">{m.name}</div>
-                      <div className={`text-[10px] ${selectedMachine === m.id ? 'text-indigo-200' : 'text-slate-400'}`}>ID: {m.id}</div>
-                    </div>
-                    {selectedMachine === m.id && <Check size={16} />}
-                  </button>
-                ))}
+                {filteredMachines.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-slate-400">No machines found</div>
+                ) : (
+                  filteredMachines.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => setSelectedMachine(m.id)}
+                      className={`w-full flex items-center p-3 rounded-xl transition-all text-left group ${
+                        selectedMachine === m.id 
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
+                          : 'bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 text-slate-600'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${selectedMachine === m.id ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
+                        <HardDrive size={16} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm truncate">{m.name}</div>
+                        <div className={`text-[10px] ${selectedMachine === m.id ? 'text-indigo-200' : 'text-slate-400'}`}>ID: {m.id}</div>
+                      </div>
+                      {selectedMachine === m.id && <Check size={16} />}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 

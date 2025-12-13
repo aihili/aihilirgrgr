@@ -10,6 +10,7 @@ export const MachinesManagement: React.FC = () => {
   // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false); // For Create/Edit Machine
   const [isHistoryOpen, setIsHistoryOpen] = useState(false); // For Viewing History
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false); // For Update Status
   
   // Data States
   const [machineName, setMachineName] = useState('');
@@ -20,7 +21,7 @@ export const MachinesManagement: React.FC = () => {
   const [history, setHistory] = useState<MachineStatus[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   
-  // Initialize with defaults matching the Go struct
+  // Initialize with defaults
   const [newStatus, setNewStatus] = useState<Partial<MachineStatus>>({
     imei: '',
     main_speed_rpm: 0,
@@ -96,13 +97,28 @@ export const MachinesManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // --- History & Status Logic ---
+  // --- History Logic ---
 
   const openHistory = async (m: Machine) => {
     setSelectedMachine(m);
     setIsHistoryOpen(true);
     setLoadingHistory(true);
-    
+    try {
+      const historyData = await api.getMachineHistory(m.id);
+      const sorted = historyData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setHistory(sorted);
+    } catch (err) {
+      console.error("Failed to load history", err);
+      setHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // --- Status Update Logic ---
+
+  const openStatusUpdate = (m: Machine) => {
+    setSelectedMachine(m);
     // Populate form with existing data or safe defaults
     setNewStatus({
         imei: m.status?.imei || `IMEI-${m.id.toString().padStart(8, '0')}`,
@@ -120,17 +136,7 @@ export const MachinesManagement: React.FC = () => {
         pump_out_on: m.status?.pump_out_on || false,
         run_test_set: m.status?.run_test_set || false,
     });
-
-    try {
-      const historyData = await api.getMachineHistory(m.id);
-      const sorted = historyData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setHistory(sorted);
-    } catch (err) {
-      console.error("Failed to load history", err);
-      setHistory([]);
-    } finally {
-      setLoadingHistory(false);
-    }
+    setIsStatusModalOpen(true);
   };
 
   const handleAddStatus = async (e: React.FormEvent) => {
@@ -139,11 +145,8 @@ export const MachinesManagement: React.FC = () => {
     
     try {
         await api.createMachineStatus(selectedMachine.id, newStatus);
-        // Refresh history and main list
-        const historyData = await api.getMachineHistory(selectedMachine.id);
-        const sorted = historyData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setHistory(sorted);
         fetchMachines(); 
+        setIsStatusModalOpen(false);
     } catch (err) {
         alert("Failed to add status");
     }
@@ -211,6 +214,9 @@ export const MachinesManagement: React.FC = () => {
                    </div>
                 </div>
                 <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button onClick={() => openStatusUpdate(machine)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Update Status">
+                    <Activity size={16} />
+                  </button>
                    <button onClick={() => openHistory(machine)} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="View History">
                     <Clock size={16} />
                   </button>
@@ -337,11 +343,10 @@ export const MachinesManagement: React.FC = () => {
         </div>
       )}
 
-      {/* HISTORY & STATUS MODAL */}
+      {/* HISTORY MODAL (Pure View) */}
       {isHistoryOpen && selectedMachine && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-50 animate-fade-in p-4 md:p-6">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col animate-slide-up ring-1 ring-black/5 overflow-hidden">
-                
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col animate-slide-up ring-1 ring-black/5 overflow-hidden">
                 {/* Header */}
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
                     <div className="flex items-center gap-4">
@@ -350,243 +355,245 @@ export const MachinesManagement: React.FC = () => {
                         </div>
                         <div>
                             <h3 className="text-lg font-bold text-slate-800">{selectedMachine.name}</h3>
-                            <p className="text-slate-500 text-xs font-mono">ID: {selectedMachine.id}</p>
+                            <p className="text-slate-500 text-xs font-mono">ID: {selectedMachine.id} - History Log</p>
                         </div>
                     </div>
                     <button onClick={() => setIsHistoryOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-100 rounded-lg">
                         <X size={24} />
                     </button>
                 </div>
-
-                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                    
-                    {/* LEFT: History List (Takes remaining space) */}
-                    <div className="flex-1 flex flex-col bg-white overflow-hidden border-r border-slate-100">
-                        <div className="p-3 bg-slate-50/30 border-b border-slate-100 flex justify-between items-center shrink-0">
-                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status Log</h4>
-                            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{history.length} records</span>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-0">
-                            {loadingHistory ? (
-                                <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                                    <RotateCw className="animate-spin mr-2" size={16} /> Loading history...
-                                </div>
-                            ) : history.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm">
-                                    <Clock size={32} className="mb-2 opacity-20" />
-                                    No history records found
-                                </div>
-                            ) : (
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                                        <tr>
-                                            <th className="px-4 py-3 border-b border-slate-100">Time</th>
-                                            <th className="px-4 py-3 border-b border-slate-100">Speed / Cycles</th>
-                                            <th className="px-4 py-3 border-b border-slate-100">Process Time</th>
-                                            <th className="px-4 py-3 border-b border-slate-100 text-right">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {history.map((status) => (
-                                            <tr key={status.id} className="hover:bg-slate-50/50 transition-colors text-sm">
-                                                <td className="px-4 py-3 text-slate-600 font-mono text-xs whitespace-nowrap">
-                                                    {new Date(status.created_at).toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                      <span className="font-bold text-slate-700 text-xs">{status.main_speed_rpm} RPM</span>
-                                                      <span className="text-slate-400 text-[10px]">{status.machine_cycles.toLocaleString()} Cyc</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs text-slate-600 font-mono">{status.processing_time}</span>
-                                                        <span className="text-[10px] text-slate-400">Min: {status.min}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1 flex-wrap max-w-[120px] ml-auto">
-                                                        {status.fan_on && <span title="Fan On" className="w-2 h-2 rounded-full bg-emerald-500"></span>}
-                                                        {status.powder_on && <span title="Powder On" className="w-2 h-2 rounded-full bg-indigo-500"></span>}
-                                                        {status.pump_in_on && <span title="Pump In" className="w-2 h-2 rounded-full bg-blue-500"></span>}
-                                                        {status.pump_out_on && <span title="Pump Out" className="w-2 h-2 rounded-full bg-orange-500"></span>}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                {/* List */}
+                <div className="flex-1 flex flex-col bg-white overflow-hidden">
+                    <div className="p-3 bg-slate-50/30 border-b border-slate-100 flex justify-between items-center shrink-0">
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Telemetry Records</h4>
+                        <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{history.length} records</span>
                     </div>
-
-                    {/* RIGHT: Add Status Form (Fixed width, Scrollable content) */}
-                    <div className="w-full md:w-[500px] bg-slate-50 flex flex-col border-t md:border-t-0 shrink-0 border-l border-slate-100">
-                         <div className="p-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
-                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <Activity size={16} className="text-indigo-600" />
-                                Update Device Status
-                            </h4>
-                         </div>
-
-                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                           <form onSubmit={handleAddStatus} className="space-y-6">
-                              {/* Group: Identity */}
-                              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Device Identity</label>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">IMEI</label>
-                                    <input 
-                                        type="text" 
-                                        required
-                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                        value={newStatus.imei}
-                                        onChange={e => setNewStatus({...newStatus, imei: e.target.value})}
-                                    />
-                                </div>
-                              </div>
-
-                              {/* Group: Metrics */}
-                              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                  <Gauge size={14} /> Metrics
-                                </label>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="block text-xs font-semibold text-slate-600 mb-1">RPM</label>
-                                      <input 
-                                          type="number" 
-                                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                          value={newStatus.main_speed_rpm}
-                                          onChange={e => setNewStatus({...newStatus, main_speed_rpm: Number(e.target.value)})}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-xs font-semibold text-slate-600 mb-1">Cycles</label>
-                                      <input 
-                                          type="number" 
-                                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                          value={newStatus.machine_cycles}
-                                          onChange={e => setNewStatus({...newStatus, machine_cycles: Number(e.target.value)})}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-xs font-semibold text-slate-600 mb-1">Min Value</label>
-                                      <input 
-                                          type="number" 
-                                          step="0.01"
-                                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                          value={newStatus.min}
-                                          onChange={e => setNewStatus({...newStatus, min: Number(e.target.value)})}
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-xs font-semibold text-slate-600 mb-1">Run Test (g)</label>
-                                      <input 
-                                          type="number" 
-                                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                          value={newStatus.run_test_set_g}
-                                          onChange={e => setNewStatus({...newStatus, run_test_set_g: Number(e.target.value)})}
-                                      />
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Group: Timing */}
-                              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                  <Timer size={14} /> Timing
-                                </label>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="block text-xs font-semibold text-slate-600 mb-1">Processing Time</label>
-                                      <input 
-                                          type="text" 
-                                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                          value={newStatus.processing_time}
-                                          onChange={e => setNewStatus({...newStatus, processing_time: e.target.value})}
-                                          placeholder="00:00:00"
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-xs font-semibold text-slate-600 mb-1">Remaining Time</label>
-                                      <input 
-                                          type="text" 
-                                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                          value={newStatus.remaining_time}
-                                          onChange={e => setNewStatus({...newStatus, remaining_time: e.target.value})}
-                                          placeholder="00:00:00"
-                                      />
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Group: State Toggles */}
-                              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                  <Power size={14} /> Active States
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <ToggleBtn 
-                                      active={!!newStatus.fan_on} 
-                                      onClick={() => setNewStatus(p => ({...p, fan_on: !p.fan_on}))} 
-                                      label="Fan" 
-                                      icon={Wind} 
-                                    />
-                                    <ToggleBtn 
-                                      active={!!newStatus.powder_on} 
-                                      onClick={() => setNewStatus(p => ({...p, powder_on: !p.powder_on}))} 
-                                      label="Powder On" 
-                                      icon={Zap} 
-                                    />
-                                    <ToggleBtn 
-                                      active={!!newStatus.powder_off} 
-                                      onClick={() => setNewStatus(p => ({...p, powder_off: !p.powder_off}))} 
-                                      label="Powder Off" 
-                                      icon={Zap} 
-                                    />
-                                    <ToggleBtn 
-                                      active={!!newStatus.powder_motor_on} 
-                                      onClick={() => setNewStatus(p => ({...p, powder_motor_on: !p.powder_motor_on}))} 
-                                      label="P-Motor" 
-                                      icon={Settings} 
-                                    />
-                                    <ToggleBtn 
-                                      active={!!newStatus.pump_in_on} 
-                                      onClick={() => setNewStatus(p => ({...p, pump_in_on: !p.pump_in_on}))} 
-                                      label="Pump In" 
-                                      icon={Droplets} 
-                                    />
-                                    <ToggleBtn 
-                                      active={!!newStatus.pump_out_on} 
-                                      onClick={() => setNewStatus(p => ({...p, pump_out_on: !p.pump_out_on}))} 
-                                      label="Pump Out" 
-                                      icon={Droplets} 
-                                    />
-                                     <ToggleBtn 
-                                      active={!!newStatus.run_test_set} 
-                                      onClick={() => setNewStatus(p => ({...p, run_test_set: !p.run_test_set}))} 
-                                      label="Run Test" 
-                                      icon={Activity} 
-                                    />
-                                </div>
-                              </div>
-                           </form>
-                         </div>
-                         
-                         <div className="p-4 border-t border-slate-200 bg-white sticky bottom-0 z-20">
-                            <button 
-                                onClick={handleAddStatus}
-                                type="button" 
-                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 active:translate-y-0.5"
-                            >
-                                <Save size={18} />
-                                Push Status Update
-                            </button>
-                         </div>
+                    <div className="flex-1 overflow-y-auto p-0">
+                        {loadingHistory ? (
+                            <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                <RotateCw className="animate-spin mr-2" size={16} /> Loading history...
+                            </div>
+                        ) : history.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm">
+                                <Clock size={32} className="mb-2 opacity-20" />
+                                No history records found
+                            </div>
+                        ) : (
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                                    <tr>
+                                        <th className="px-6 py-4 border-b border-slate-100">Time</th>
+                                        <th className="px-6 py-4 border-b border-slate-100">Speed / Cycles</th>
+                                        <th className="px-6 py-4 border-b border-slate-100">Process Time</th>
+                                        <th className="px-6 py-4 border-b border-slate-100 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {history.map((status) => (
+                                        <tr key={status.id} className="hover:bg-slate-50/50 transition-colors text-sm">
+                                            <td className="px-6 py-4 text-slate-600 font-mono text-xs whitespace-nowrap">
+                                                {new Date(status.created_at).toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                  <span className="font-bold text-slate-700 text-xs">{status.main_speed_rpm} RPM</span>
+                                                  <span className="text-slate-400 text-[10px]">{status.machine_cycles.toLocaleString()} Cyc</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-slate-600 font-mono">{status.processing_time}</span>
+                                                    <span className="text-[10px] text-slate-400">Min: {status.min}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1 flex-wrap ml-auto">
+                                                    {status.fan_on && <span title="Fan On" className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">FAN</span>}
+                                                    {status.powder_on && <span title="Powder On" className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">POWDER</span>}
+                                                    {status.pump_in_on && <span title="Pump In" className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">PUMP-IN</span>}
+                                                    {status.pump_out_on && <span title="Pump Out" className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700">PUMP-OUT</span>}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
+            </div>
+        </div>
+      )}
+
+      {/* UPDATE STATUS MODAL (Centered) */}
+      {isStatusModalOpen && selectedMachine && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-50 animate-fade-in p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-slide-up ring-1 ring-black/5 overflow-hidden">
+                 <div className="p-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <Activity size={18} className="text-indigo-600" />
+                        Update Device Status
+                    </h4>
+                    <button onClick={() => setIsStatusModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                        <X size={20} />
+                    </button>
+                 </div>
+
+                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50">
+                   <form onSubmit={handleAddStatus} className="space-y-6">
+                      {/* Group: Identity */}
+                      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Device Identity</label>
+                        <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">IMEI</label>
+                            <input 
+                                type="text" 
+                                required
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                value={newStatus.imei}
+                                onChange={e => setNewStatus({...newStatus, imei: e.target.value})}
+                            />
+                        </div>
+                      </div>
+
+                      {/* Group: Metrics */}
+                      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <Gauge size={14} /> Metrics
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label className="block text-xs font-semibold text-slate-600 mb-1">RPM</label>
+                              <input 
+                                  type="number" 
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                  value={newStatus.main_speed_rpm}
+                                  onChange={e => setNewStatus({...newStatus, main_speed_rpm: Number(e.target.value)})}
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-semibold text-slate-600 mb-1">Cycles</label>
+                              <input 
+                                  type="number" 
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                  value={newStatus.machine_cycles}
+                                  onChange={e => setNewStatus({...newStatus, machine_cycles: Number(e.target.value)})}
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-semibold text-slate-600 mb-1">Min Value</label>
+                              <input 
+                                  type="number" 
+                                  step="0.01"
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                  value={newStatus.min}
+                                  onChange={e => setNewStatus({...newStatus, min: Number(e.target.value)})}
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-semibold text-slate-600 mb-1">Run Test (g)</label>
+                              <input 
+                                  type="number" 
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                  value={newStatus.run_test_set_g}
+                                  onChange={e => setNewStatus({...newStatus, run_test_set_g: Number(e.target.value)})}
+                              />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Group: Timing */}
+                      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <Timer size={14} /> Timing
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label className="block text-xs font-semibold text-slate-600 mb-1">Processing Time</label>
+                              <input 
+                                  type="text" 
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                  value={newStatus.processing_time}
+                                  onChange={e => setNewStatus({...newStatus, processing_time: e.target.value})}
+                                  placeholder="00:00:00"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-semibold text-slate-600 mb-1">Remaining Time</label>
+                              <input 
+                                  type="text" 
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                  value={newStatus.remaining_time}
+                                  onChange={e => setNewStatus({...newStatus, remaining_time: e.target.value})}
+                                  placeholder="00:00:00"
+                              />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Group: State Toggles */}
+                      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <Power size={14} /> Active States
+                        </label>
+                        <div className="grid grid-cols-3 gap-3">
+                            <ToggleBtn 
+                              active={!!newStatus.fan_on} 
+                              onClick={() => setNewStatus(p => ({...p, fan_on: !p.fan_on}))} 
+                              label="Fan" 
+                              icon={Wind} 
+                            />
+                            <ToggleBtn 
+                              active={!!newStatus.powder_on} 
+                              onClick={() => setNewStatus(p => ({...p, powder_on: !p.powder_on}))} 
+                              label="Powder On" 
+                              icon={Zap} 
+                            />
+                            <ToggleBtn 
+                              active={!!newStatus.powder_off} 
+                              onClick={() => setNewStatus(p => ({...p, powder_off: !p.powder_off}))} 
+                              label="Powder Off" 
+                              icon={Zap} 
+                            />
+                            <ToggleBtn 
+                              active={!!newStatus.powder_motor_on} 
+                              onClick={() => setNewStatus(p => ({...p, powder_motor_on: !p.powder_motor_on}))} 
+                              label="P-Motor" 
+                              icon={Settings} 
+                            />
+                            <ToggleBtn 
+                              active={!!newStatus.pump_in_on} 
+                              onClick={() => setNewStatus(p => ({...p, pump_in_on: !p.pump_in_on}))} 
+                              label="Pump In" 
+                              icon={Droplets} 
+                            />
+                            <ToggleBtn 
+                              active={!!newStatus.pump_out_on} 
+                              onClick={() => setNewStatus(p => ({...p, pump_out_on: !p.pump_out_on}))} 
+                              label="Pump Out" 
+                              icon={Droplets} 
+                            />
+                             <ToggleBtn 
+                              active={!!newStatus.run_test_set} 
+                              onClick={() => setNewStatus(p => ({...p, run_test_set: !p.run_test_set}))} 
+                              label="Run Test" 
+                              icon={Activity} 
+                            />
+                        </div>
+                      </div>
+                   </form>
+                 </div>
+                 
+                 <div className="p-4 border-t border-slate-200 bg-white sticky bottom-0 z-20">
+                    <button 
+                        onClick={handleAddStatus}
+                        type="button" 
+                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 active:translate-y-0.5"
+                    >
+                        <Save size={18} />
+                        Push Status Update
+                    </button>
+                 </div>
             </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { Machine, User, Device, PermissionRequest, MachineStatus, PermissionDetail } from '../types';
 
-const API_BASE_URL = 'https://virescent-clelia-heartaching.ngrok-free.dev';
+const API_BASE_URL = 'https://sturdy-meme-x6x7g5vpjq62vv-8080.app.github.dev';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -101,15 +101,16 @@ export const api = {
   },
   // Machine History & Status
   getMachineHistory: async (id: number): Promise<MachineStatus[]> => {
-    // Assuming endpoint structure. Adjust if backend differs.
-    const response = await fetch(`${API_BASE_URL}/api/admin/machines/${id}/history`, {
+    // Matches Swagger: /api/mymachines/{id}/history
+    const response = await fetch(`${API_BASE_URL}/api/mymachines/${id}/history`, {
       headers: getHeaders(),
     });
     return handleResponse(response);
   },
   createMachineStatus: async (id: number, status: Partial<MachineStatus>) => {
-    const response = await fetch(`${API_BASE_URL}/api/admin/machines/${id}/status`, {
-      method: 'POST',
+    // Matches Swagger: /api/mymachines/{id}/status via PUT
+    const response = await fetch(`${API_BASE_URL}/api/mymachines/${id}/status`, {
+      method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(status),
     });
